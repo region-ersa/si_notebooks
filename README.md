@@ -6,7 +6,7 @@ Francisco Rowe, Gunther Maier, Daniel Arribas-Bel and Sergio J. Rey
 
 *Editorial*
 
-[The Potential of Notebooks for Scientific Publication: Reproducibility and Dissemination](https://doi.org/10.18335/region.v7i3.357)\\
+[The Potential of Notebooks for Scientific Publication: Reproducibility and Dissemination](https://doi.org/10.18335/region.v7i3.357). 
 Francisco Rowe, Gunther Maier, Daniel Arribas-Bel, Sergio J. Rey
 
 *Articles*
