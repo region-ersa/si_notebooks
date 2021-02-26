@@ -10,7 +10,7 @@ Francisco Rowe, Gunther Maier, Daniel Arribas-Bel and Sergio J. Rey
 
 *Articles*
 
-* Geoff Boeing. *Urban Street Network Analysis in a Computational Notebook* [Notebook](/boeing/278-Article Text-1840-2-10-20200520.ipynb) [pdf](https://doi.org/10.18335/region.v6i3.278)
+* Geoff Boeing. *Urban Street Network Analysis in a Computational Notebook* [Notebook](boeing/) [pdf](https://doi.org/10.18335/region.v6i3.278)
 
 * Mauricio Sarrias. [Random Parameters and Spatial Heterogeneity using Rchoice in R] [pdf](https://doi.org/10.18335/region.v7i1.279)
 
