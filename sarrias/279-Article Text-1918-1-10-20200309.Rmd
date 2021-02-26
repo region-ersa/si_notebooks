@@ -1,0 +1,460 @@
+---
+title: "Random Parameters and Spatial Heterogeneity using Rchoice package in R"
+abstract: "This documents provides a brief introduction to models with spatial heterogeneity using  a random parameter approach.  Specifically, this paper shows how this modelling strategy can be used to capture  and model spatial heterogeneity and locally varying coefficients for different latent structure. To show the main advantages of this modeling strategy, the Rchoice package (Sarrias 2016) in R is used. The examples will be focused on the ordered probit model model with spatially varying coefficients using  self-assessed health status as dependent variable."
+output:
+  pdf_document: default
+  html_document:
+    number_sections: true
+    toc: true
+    highlight: pygments
+    theme: spacelab
+    fig_retina: 2
+header-includes:
+- \usepackage{amsmath}
+- \usepackage{amssymb}
+bibliography: SpatialRcoefficient.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(prompt =  TRUE)
+```
+
+
+# Introduction 
+
+Regional scientists, as well as many social researchers concerned on spatial relationships, analyze how the reciprocal geographical interaction of social agents  generates spatial autocorrelation, affecting the bias and efficiency of standard econometric estimators. After @anselin1988spatial, a large number of papers deal with the spatial autocorrelation using spatial versions of standard linear regression models, namely Spatial Autoregresive Regression (SAR) or Spatial Error Model (SEM) and even recent contributions extend the analysis toward Spatial Panel Data [@kelejian1999generalized; @kelejian1998generalized; @elhorst2014spatial]. However, spatial interaction also is manifested through spatially varying coefficients referred to as:  "*structural instability over space, in the form of different response functions or systematically varying parameters*" [@anselin1988spatial]. In spite of the relevance of the concept, the evolution and development of econometric models that attempt to capture and model spatial heterogeneity has not been as euphoric as those focused on the spatial autocorrelation. The few attempts to capture this heterogeneity can be summarized by the spatial expansion method (SEM) [@casetti1972generating],  Geographically Weighted Regression (GWR) [@brunsdon1998geographically] or assuming that the local relationship varies randomly over geographical space, a method also known as the Random Coefficient Model (RCM) [@swamy1971statistical]. Each one of these methods enable estimation of model parameters locally, or they allow model parameter to vary as a function of location. [^1]
+
+
+[^1]:For further review see for example @fotheringham1999local, chapter 6 in @anselin1988spatial, @lloyd2010local,  and chapter 1 in @fotheringham2003geographically.
+
+The three methods presented above share an important limitation: they require aggregating the variables at the location level. Therefore, we are prevented from using data at the individual level and capturing the spatial heterogeneity, simultaneously. This raises concerns about the misleading conclusions that can be derived at the individual level by using aggregate variables known as the *ecological fallacy problem*  [@robinson1950ecological]. A potential solution for this constraint is provided by multilevel modeling.[^2] This  approach separates the effect of personal and place characteristics to investigate the extent and nature of spatial variation in individual outcomes measures [@goldstein1987multilevel]. The main drawback of multilevel modeling is that usually the random coefficients are assumed to be normally distributed.  This makes the estimation process easier, but creates other problems. For example, this assumption implies that some locations might have positive or negative coefficients, even whether or not this is true. In practice, this implies that occasionally researchers find sign reversals that are counterintuitive and difficult to explain.  Furthermore, the domain of the normal distribution is $(-\infty, +\infty)$, which results in unreliable extreme coefficients and high coefficient variability. Those problems have also been found when applying the GWR approach [@jetz2005local].[^2a] 
+
+[^2]: For other quantitative methods that avoid the ecological fallacy problem see @withers2001quantitative.
+[^2a]: There are some interesting extensions that have been recently developed. For example, @dong2015multilevel extend the traditional multilevel models to incorporate spatial interacation effects at different level units. @dong2018geographically extend the GWR for ordinal categorical responses. Bayesian spatially varying coefficient models have been also suggested by @finley2011comparing and @gelfand2003spatial. 
+
+This study focusses on models with spatially varying coefficients using simulation as in @sarrias2019monetary and @train2009discrete. This modeling strategy is intended to complement the existing approaches by using variables at micro level---overcoming the problem associated with spatial aggregation---and by adding flexibility and realism to the potential domain of the coefficient on the geographical space. Spatial heterogeneity is modelled by allowing the parameters associated with each observed variable to vary "randomly" across space according to some distribution $g(\cdot)$. However, it is not known how the parameters vary across space. All that is known is that they vary locally with population probability density function (pdf) $g(\cdot)$, which is assumed to be well behaved and continuous. 
+ 
+To show the main advantages of this modeling strategy, the **Rchoice** package [@sarrias2016discrete] in R is used. The examples will be focused on the ordered probit model model with spatially varying coefficients using self-assessed health status as dependent variable. 
+
+[^3]: For modeling discrete spatial heterogeneity see @sarrias2019monetary. In this case, spatial heterogeneity is accommodated by making use of a discrete number of separate classes of regions, $Q$, where each region has an unknown probability of belonging to some class, and each class has a different coefficient. Thus the groups are homogeneous, with common parameters $\boldsymbol \beta_q, q=1,...,Q$, for the members of the group, but the groups themselves are different from one another.  In this case, we say that the parameters vary across space following a discrete distribution. 
+
+The remainder of this paper is organized as follows. [Section 2](#modelling) discusses the modelling approach for incorporating continuous spatial heterogeneity using a random parameter approach. The main R packages needed for the examples are described in [Section 3](#packages). The example using **Rchoice** package in R is presented in [Section 4](#application). Finally, [Section 5](#conclu) concludes.   
+
+
+# Modelling approach {#modelling}
+
+## Continuous spatial heterogeneity: 
+
+Consider the following structural model:
+
+\begin{equation}
+	\begin{aligned}
+y_{ci} ^*  & = \mathbf x_{ci}'\boldsymbol\beta_c + \epsilon_{ci},\;\; c = 1,..., C, i = 1,...,n_c\\
+      \boldsymbol\beta_c & \sim g(\boldsymbol\beta_c),
+	\end{aligned}
+\end{equation}
+
+where $y_{ci}^*$ is a latent (unobserved) process for individual $i$ in geographical area $c$ (e.g, region, city, country, census track) that we are trying to explain; $\mathbf x_{ci}$ is a $K\times 1$ vector of individual and regional variables; and $\epsilon_{ci}$ is the error term.[^4]  It is assumed that the vector $(y_{ci}, \mathbf x_{ci}', \boldsymbol\beta_c')'$ is independently and identically distributed. The conditional probability density function of the latent process, $f^*(y_{ic}|\mathbf x_{ci}, \boldsymbol \beta_c)$, is determined once the nature of the observed $y_{ci}$ and the population pdf of $\epsilon_{ci}$ is known.  For example, if the observed $y_{ci}$ is binary and $\epsilon_{ci}$ is normal distributed, we obtain the traditional probit model. But if $\epsilon_{ci}$ is distributed as logistic, then we obtain the binary logit model. Due to space restrictions, the applied example in this study will focus on the ordered model. 
+
+[^4]: Throughout this work I will use location unit, region, or  geographical area interchangeably to refer to the subindex $c$.
+
+The key element in the structural model is $\boldsymbol \beta_c$.  The notation implies that coefficients are associated with region $c$, representing those region-specific partial correlations on the latent dependent variable. Thus, all individuals located in the same region have the same coefficient, but there exists inter-spatial heterogeneity, i.e., the coefficients vary across regions but not within the region.
+
+However, we do not know how these parameters vary across regions. All we know is that they vary locally with population pdf $g(\boldsymbol\beta_c)$.  Once $g(\boldsymbol\beta_c)$ is specified, we might have a fully parametric or a semi-parametric spatially random parameter model. 
+
+## Choosing the distribution {#dist}
+
+Continuous spatial heterogeneity is introduced by assuming that the parameters vary "randomly" across regions according to some pre-specified "continuous" distribution. The pdf of the spatially random coefficients in the population is $g(\boldsymbol\beta_c| \boldsymbol \theta)$, where $\boldsymbol \theta$ represents, for example, the mean and variance of $\boldsymbol\beta_c$.  The goal for the researcher is to estimate $\boldsymbol \theta$.
+
+The distribution of the spatially random parameters can in principle take any shape.  The researcher has to choose a priori the distribution according to his beliefs of the domain  and boundedness of the coefficients. Therefore, some prior theoretical knowledge of the spatial structure being modeled may lead to a more appropriate choice of the distribution.  Below, some continuous distributions and their implications are discussed.
+
+
+1. **Normal Distribution**: The normal distribution is by far the most widely used distribution for the spatially random parameters. The density of the normal parameter has mean $\beta$ and standard deviation $\sigma_{\beta}$, so that $\boldsymbol \theta = (\beta, \sigma_{\beta})'$. Thus, the coefficient for each region can be written as $\beta_c = \beta + \sigma_{\beta}\eta_c$, where $\eta_c\sim N(0, 1)$. An important feature of the normal density is its unboundedness.  This implies that every real number has a positive probability of being drawn. Thus, specifying a given coefficient to follow a normal distribution is equivalent to making the a priori assumption that there is a proportion of regions with positive coefficients and another proportion with negative ones. As an illustration, consider a normally distributed coefficient with population parameters $\beta = 0.5$ and $\sigma_{\beta} = 1$.  The proportion of regions with positive coefficients is approximately $\Phi(\beta/\sigma_{\beta})\cdot 100 \approx 70\%$. This last fact makes this distribution quite suitable when the researcher assumes that the effect of $x_{k}$ on $y^*$ can have both signs depending in the local context of each region. For example, there exists an extensive literature that uses the city population as a proxy for urbanization economies [see for example @duranton2004micro]. However, in some regions, a large population may suggest agglomeration economies, while in others, it may suggest congestion effects [@ali2007can]. In other words, $\beta_{c}$ for the population density can take positive or negative values across space. 
+The normal distribution can be also used as an initial exploratory analysis to determine the domain of a coefficient. For example, if the estimated parameters are $\widehat{\beta} = 2$  and $\widehat{\sigma}_{\beta}=1$, this implies that approximately $\Phi(\widehat{\beta}/\widehat{\sigma}_{\beta})\cdot 100 \approx 98\%$ of the regions in the sample have a positive coefficient. Therefore, the researcher may be more inclined to choose a distribution with just a positive real domain.  One major disadvantage of the normal distribution is that it has infinite tails, which might result in some regions having implausible extreme coefficient values.  
+
+2. **Triangular Distribution**: This is a continuous probability distribution with probability density function shaped like a triangle. The advantage of this distribution is that it has a definite upper and lower limit, so its tails are shorter than the normal distribution and we avoid extreme coefficients that may result for some regions. The density of a triangular distribution with mean $\beta$ and spread $s_{\beta}$ is zero beyond the range $(\beta - s_{\beta}, \beta + s_{\beta})$, rises linearly from $\beta - s_{\beta}$ to $\beta$, and drops linearly to $\beta + s_{\beta}$. The parameters $\boldsymbol\theta = (\beta,s_{\beta})'$ are estimated.
+
+3. **Uniform Distribution**: In this case the parameter for each location is equally likely to take on any value in some interval. Suppose that the spread of the uniform distribution is $s_{\beta}$, such that the parameter is uniformly distributed from $\beta - s_{\beta}$ to $\beta + s_{\beta}$. Then the parameter can be constructed as $\beta_c = \beta + s_{\beta}(2u_c-1)$ where $u_c\sim U[0,1]$ and the parameters $\boldsymbol\theta = (\beta, s_{\beta})$ are estimated. The new random draw $(2u_c-1)$ is distributed as $U[-1,+1]$, therefore multiplying by $s_{\beta}$ gives a uniformly distributed parameter $\pm s_{\beta}$ [@train2009discrete; @hensher2003mixed]. The standard deviation of the uniform distribution can be derived from the spread by dividing $s_{\beta}$ by $\sqrt{3}$. Note also that the uniform distribution with a $[0,1]$ bound is very suitable when there exists spatial heterogeneity in a dummy variable. For this case the restriction is $\beta=s_{\beta}=1/2$.	
+
+The normal, triangular and uniform distributions permit positive and negative coefficients. However, as I discussed above, the coefficient may present spatial heterogeneity but only in the positive or negative domain. For example, we may be confident that the coefficient for $x_{k}$ is positive for all regions, but still there may exist spatial heterogeneity around the mean. Some widely used distributions with domain in the positive numbers are the log-normal, truncated normal, and Johnson $S_b$ distribution.[^5]
+
+[^5]: If some coefficient is expected a priori to be negative for all the regions, one might create the negative of the variable and then include this new variable in the estimation. This "trick" allows the coefficient to be negative without imposing a sign change in the estimation procedure [@train2009discrete].
+
+4. **Log-normal Distribution**: The support of the log-normal distribution is $(0, \infty)$. Formally, the coefficient for each region is specified as $\beta_c = \exp\left( \beta + \sigma_{\beta}\eta_c\right)$ where $\eta_c\sim N(0,1)$. The parameters $\beta$ and $\sigma_{\beta}$, which represent the mean and standard deviation of $\log(\beta_c)$, are estimated. The median, mean, and standard deviation of $\beta_c$ are $\exp(\beta_c)$, $\exp(\beta_c + \sigma_{\beta}^2/2)$ and $\mbox{mean}\times \sqrt{\exp(\sigma_{\beta}^2)-1}$, respectively [@revelt1998mixed; @train2009discrete]. The main drawback of the log-normal distribution is that it has a very long right-hand tail. This means that we might find regions with unreasonable extreme positive coefficients.
+	 	
+5. **Truncated Normal Distribution**: The domain of this distribution is $(0,\infty)$ if the normal distribution is truncated below at zero. The parameter for each region is created as $\beta_c = \max(0, \beta + \sigma_{\beta}\eta_c)$ where $\eta_c\sim N(0,1)$ with the share below zero massed at zero equal to $\Phi(- \beta/\sigma_{\beta})$. A normal distribution truncated at 0 can be useful when the researcher has a priori belief that for some regions the marginal latent effect of the variable is null. The parameters $\boldsymbol \theta = (\beta, \sigma_{\beta})$ are estimated.
+
+6. **Johnson $S_b$ Distribution**: The $S_b$ distribution gives coefficients between 0 and 1, which is also very suitable for dummy variables. The parameter for region $c$ is computed as $\beta_c = \frac{\exp(\beta + \sigma_{\beta}\eta_c)}{1 + \exp(\beta + \sigma_{\beta}\eta_c)}$ where $\eta_c\sim N(0,1)$ and the parameters $\beta$ and $\sigma_{\beta}$ are estimated. The mean, variance and shape are determined by the mean and variance of $\beta + \sigma_{\beta}\eta_c$ which is a normal distributed parameter.  If the analyst needs the coefficient to be between 0 and $k$, then the variable can be multiplied by $k$. The logic behind this is the following. Since $\beta_c\times x_{ic}$ ranges between $[0,1]$, then $\beta_c\times k \times x_{ic}$ is the same as $k[0,1]=[0,k]$. The advantage of the Johnson $S_b$ is that it can be shaped like log-normal distribution, but with thinner tails below the bound.
+
+For any distribution, all the information about the unobserved spatial heterogeneity is captured by the spread or standard deviation parameter.  For example, a significant standard deviation would reveal a spatially non-stationary relationship, and the higher the standard deviation the higher the unobserved spatial heterogeneity in the parameters. Finally, it is worth noting that if only the constant is assumed to be random, then the model is reduced to the random effect model also known as the spatially constant random parameter in the multilevel context [@jones1991specifying]. If $n_c =1$ for all $C$, then the model is reduced to the RCM.
+
+
+## Correlated spatially random parameters and observed variations around the mean
+
+The random parameters can be generalized to include correlation across the parameters. For example, we may be interested in whether regions with greater (lower) $\beta_1$ have also greater (lower) values for $\beta_2$. If it is true, we would say that both effects are positively correlated within regions. Furthermore, it is likely that the association between $y_{ci}^*$ and $x_{ci}$ is modified by unmeasured regional effects or region-specific unobserved factors. Therefore, by allowing the constant and the slope parameter to be correlated we might be able to identify whether those unobserved factors and the effect of $x_{ci}$ are positively or negatively associated.
+
+As an illustration of the usefulness of the correlated parameters, @wheeler2005multicollinearity raise the awareness of the potential dependencies (correlation) among the local regression coefficients associated with different exogenous variables in the GWR context.  They use a GWR approach to explain the white male bladder cancer mortality rates in the 508 States Economic Areas of the United States. Using the population density and smoking as covariates, they find that those regions with high smoking parameter also have a low population density parameter. As they state, the important question is whether this negative correlation is real or an artifact of the statistical method. By allowing the parameters to be explicitly correlated, we are able to test whether the correlation among the parameters is in fact significant.[^5a]
+
+[^5a]: Those readers interested in modelling both spatial dependence and spatial heterogeneity are referred to @dong2016spatial. They develop a spatial random slope multilevel modeling approach to account for the within-group dependence among individuals in the same area and the spatial dependence between areas simultaneously. 
+
+For simplicity of the notation, consider that the coefficients are distributed across space following a multivariate normal distribution, $\boldsymbol \beta_c \sim MVN(\boldsymbol\beta, \boldsymbol \Sigma)$. In this case, the coefficient can be written as:
+
+\begin{equation*}
+\boldsymbol \beta_c = \boldsymbol \beta + \mathbf L \boldsymbol \eta_c, 
+\end{equation*}
+
+where $\boldsymbol \eta_c\sim N(\boldsymbol 0, \mathbf I)$, and $\mathbf L$ is the lower-triangular Cholesky factor of $\boldsymbol \Sigma$ such that $\mathbf  L \mathbf  L' = var(\boldsymbol \beta_c) = \boldsymbol \Sigma$. When the off-diagonal elements of $\mathbf L$ are zero the parameters are independently normal distributed. If we assume that the model has only one covariate and the constant, then the extended form of the spatially random coefficient vector is 
+
+\begin{equation*}
+	\begin{aligned}
+	\begin{pmatrix} \alpha_c \\ \beta_c \end{pmatrix} &=  \begin{pmatrix} \alpha \\ \beta \end{pmatrix} + \begin{pmatrix}
+	\sigma_{\alpha\alpha} & 0 \\ \sigma_{\beta\alpha} & \sigma_{\beta\beta} \end{pmatrix} \begin{pmatrix} \eta_{c\alpha} \\ \eta_{c\beta} \end{pmatrix} \\
+\boldsymbol \beta_c & = \boldsymbol \beta + \mathbf L \boldsymbol \eta_c,
+	\end{aligned}
+\end{equation*}
+
+where:
+
+
+\begin{equation*}
+\mathbf  L \mathbf  L'=\begin{pmatrix}
+\sigma_{\alpha\alpha} & 0  \\ \sigma_{\beta\alpha} & \sigma_{\beta\beta} \end{pmatrix} \begin{pmatrix}
+\sigma_{\alpha\alpha} & \sigma_{\beta\alpha} \\ 0 & \sigma_{\beta\beta} \end{pmatrix} = \begin{pmatrix}
+\sigma_{\alpha\alpha}^2 & \sigma_{\alpha\alpha}\sigma_{\beta\alpha} \\ \sigma_{\beta\alpha}\sigma_{\alpha\alpha} & \sigma_{\beta\alpha} ^2 + \sigma_{\beta\beta}^2 
+\end{pmatrix}= \boldsymbol \Sigma
+\end{equation*}
+
+If we need correlated parameters with positive domain, we might create a log-normal distributed parameter. For instance, if we need $\beta_c$ to be log-normal distributed, then we can transform it in the following way:
+
+\begin{equation*}
+\beta_c = \exp(\beta + \sigma_{\beta\alpha}\eta_{c\alpha} + \sigma_{\beta\beta}\eta_{c\beta})
+\end{equation*}
+
+Observed spatial heterogeneity---or deterministic spatial heterogeneity---can be also accommodated in the random parameters by including region-specific covariates. Specifically, the vector of random coefficient is:
+
+\begin{equation}\label{eq:observed_spatial_het}
+	\boldsymbol\beta_c = \boldsymbol\beta + \boldsymbol\Pi\mathbf z_c + \mathbf  L \boldsymbol\eta_c
+\end{equation}
+
+where $\mathbf z_c$ is a set of $M$ characteristics of region $c$ that influences the mean of the spatial random coefficients, and $\boldsymbol\Pi$ is a $K\times M$ is a matrix of additional parameters. The conditional mean becomes $E(\boldsymbol\beta_c|\mathbf z_c ) = \boldsymbol\beta + \boldsymbol\Pi\mathbf z_c$.
+
+The main drawback of this modeling strategy---and any type of spatial heterogeneity in the form of unobserved spatial heterogeneity---is that it assumes that the coefficients are drawn from some univariate or multivariate distribution and no attention is paid to the location of the regions [@fotheringham1999local].  However, the previous model can be very useful to consider regions' location explicitly in the random parameters if $\mathbf z_c$ includes any function of the geographical coordinates $(u_c, v_c)$. Thus, if $\mathbf z_c = h(\mathbf u_c, \mathbf v_c)$, where $h()$ is any function, and $\boldsymbol \eta_c$ = 0, then the model collapses into the Casetti's spatial expansion method. 
+
+## Estimation {#sec34}
+
+Let $\mathbf y_c = \left\lbrace y_{i1}, y_{i2},...,y_{in_c}\right\rbrace$ be the sequence of choices for all individuals in region $c$, where $n_c$ is the total number of individuals in that region. Assuming that individuals are independent across regions, the joint probability density function, given $\boldsymbol \beta_c$, can be written as
+
+\begin{equation}\label{eq:probabilities_c}
+\Pr(\mathbf y_c| \mathbf X_c,\boldsymbol \beta_c)=\prod_{i = 1}^{n_c}f^*(y_{ic}|\mathbf x_{ic}, \boldsymbol\beta_{c}),
+\end{equation}
+
+because, conditional on $\boldsymbol\beta_c$, the observations are independent. Since $\boldsymbol\beta_c$ is common for individuals living in the region $c$, within each region individuals are not independent. Thus, the unconditional pdf of $\mathbf y_c$ given $\mathbf X_c$ will be the weighted average of the conditional probability evaluated over all possible values of $\boldsymbol\beta$, which depends on the parameters of the distribution of $\boldsymbol\beta_c$:
+
+\begin{equation}
+P_c(\boldsymbol\theta) = f(\mathbf  y_c|\mathbf  X_c,\boldsymbol\theta) = \int_{\boldsymbol\beta_c} \left[ \prod_{i = 1}^{N_c}f^*(y_{ic}|\mathbf  x_{ic}, \boldsymbol\beta_{c},\boldsymbol\theta)\right]  g(\boldsymbol\beta_c)d\boldsymbol\beta_c, \label{eq:probability_continuous}
+\end{equation}
+
+The unconditional probability  has no closed form solution, therefore the log-likelihood function is difficult to compute. However, we can simulate this probability and use the simulated maximum likelihood in order to estimate $\boldsymbol \theta$ [@gourieroux1997simulation; @hajivassiliou1986classical; @stern1997simulation; @train2009discrete].[^6] In particular, $P_c(\boldsymbol\theta)$  is approximated by a summation over randomly chosen values of $\boldsymbol\beta_c$. For a given value of the parameters $\boldsymbol\theta$, a value of $\boldsymbol\beta_c$ is drawn from its distribution. Using this draw of $\boldsymbol\beta_c$, $P_c(\boldsymbol\theta)$ is calculated. This process is repeated for many draws, and the average over the draws is the simulated probability. Formally, the simulated probability for region $c$ is 
+
+\begin{equation}\label{eq:simulated_probability}
+\widetilde{P}_c(\boldsymbol\theta) = \frac{1}{R}\sum_{r=1}^R \prod_{i = 1} ^ {N_c} \widetilde{P}_{icr}(\boldsymbol\theta)
+\end{equation}
+
+where $\widetilde{P}_{icr}$ is the probability for individual $i$ in region $c$ evaluated at the $r$th draw of $\boldsymbol\beta_c$, and $R$ is the total number of draws. Then, the simulated log-likelihood function is:
+
+\begin{equation}\label{eq:sim_loglik}
+\log L_s = \sum_{c = 1}^C \log \left[ \frac{1}{R}\sum_{r=1}^R \prod_{i = 1} ^ {N_c} \widetilde{P}_{icr}(\boldsymbol\theta)\right] 
+\end{equation}
+
+[^6]: Other methods can be used in order to approximate the integrals. For example, Gauss-Hermite quadrature procedure is another numerical method widely used. However, it has been documented that for models with more than 3 random parameters SML performs better. Bayesian estimation is also suitable for continuous spatial heterogeneity. See for example @hashiguchi2014agglomeration.
+
+
+@lee1992efficiency, @gourieroux1991simulation and @hajivassiliou1986classical derive the asymptotic distribution of the simulated maximum likelihood (SML) estimator based on smooth probability simulators with the number of draws increasing with sample size. Under regularity conditions, the estimator is consistent and asymptotically normal. When the number of draws, $R$, rises faster than the square root of the number of observations, the estimator is asymptotically equivalent to the maximum likelihood estimator. It is worth noting that, even though the simulated probability is an unbiased estimate of the true probability, the log of the simulated probability with fixed number of repetitions is not an unbiased estimate of the log of the true probability. This bias in the SML decreases as the number of draws increases [see for example @gourieroux1997simulation; @revelt1998mixed]. 
+
+One main limitation of these modeling strategies is that the performance of the maximum likelihood estimators may not be accurate or satisfactory when the number of individuals per region is large. The problem is that the log-likelihood function involves the integration or summation over a term involving the product of the probabilities for all the individuals in each location $c$. 
+@borjas1994two were the first in noticing this problem in the context of the probit model with random effects and using Gauss quadrature. @lee2000numerically also gives more insights about this problem. For example, assuming a sample of 500 individuals per group---or regions in our case--- with a likelihood contribution of $0.5$ per observation,  @borjas1994two show that  the value of the integrand can be as small as $e^{500 \times \ln(0.5)}\approx e^{-346.6}$, which is below the existing absolute value for a computer. A consequence of this might be larger standard errors, explosive estimates and/or a singular Hessian.  In the worst scenario, the computation will *overflow*, that is, it will exceed the computer's capacity to compute the value and the maximization procedure will stop. This issue should be borne in mind when applying these methods.[^6a]
+
+
+[^6a]: For other estimation methods, such as Bayesian estimation of multi-level models, see for example @burkner2018advanced.
+
+# Packages and dependencies {#packages}
+
+The main R packages used in the examples are the following:
+
+1. **Rchoice**: This is the main package to estimate Binary, Poisson and Ordered Models with Random parameters. 
+2. **foreign**: This package is used to read data in different formats (Stata, SPSS, etc).
+3. **car**: This package will allow us to perform linear hypotheses. 
+4. **lmtest**: This package has generic functions that allow to perform likelihood ratio tests for nested models. 
+
+All these packages can be installed using `install.packages()` function. 
+
+# Application using Rchoice in R: Self-assessed health status {#application}
+
+## Ordered Probit model with spatially homogeneous parameters
+
+Suppose we are interested in the determinants of individuals' subjective evaluation of health. We assume that the health status of individual $i$ in municipality $c$, $h_{ic}$, follows an underlying continuous but latent health process $h_{ic}^*$ based on a linear combination of individual and municipal covariates given by:
+
+\begin{equation}
+h_{ic}^*= \mathbf x_{ic}'\boldsymbol\beta + \epsilon_{ic}
+\end{equation}
+
+where $\mathbf x_{ic}$ is a vector of individual and municipal characteristics; $\epsilon_{ic}\sim N(0, \sigma_{\epsilon})$ is the error term, but since the scale of $h_{ic}^*$ is not identified we normalized $\sigma_{\epsilon} =1$. Note that this model assumes that the partial correlation between the latent health status and the covariates follows a  spatially stationary process. 
+
+As typical in ordered models, we do not observe $h_{ci}^*$, but  we instead observe the self-assessed health status (SAH) for each individual, $h_{ic}$, which ranges between 1 (very bad health) and 5 (very good health) in our sample. The link between $h_{ic}$ and  $h_{ic}^*$ is the following:
+
+\begin{equation*}
+h_{ic} =
+	\begin{cases}
+		1 & \mbox{if} \;\; \kappa_0 < h_{ic}^* < \kappa_1 \\
+		2 & \mbox{if} \;\; \kappa_1 < h_{ic}^* < \kappa_2 \\
+		\vdots \\
+		5 &  \mbox{if} \;\; \kappa_{4} < h_{ic}^* < \kappa_5
+	\end{cases}
+\end{equation*}
+
+where it is assumed that $\kappa_0 = - \infty$ and $\kappa_5 = \infty$ to cover the entire real line. Since that having a constant is useful in our model to accommodate random effects, we set $x_{1ic}\equiv 1$ for all $i = 1,...,N$. Therefore, for identification we set $\kappa_1 \equiv 0$. 
+
+To estimate an ordered probit model with spatially homogeneous coefficients, we will use the **Rchoice**  package which is loaded using the `library()` function: 
+
+```{r loadRchoice, message = FALSE}
+# Load package
+library("Rchoice")
+```
+
+Now, we load the dataset `sah.chile`. This dataset comes from the 2013 National Socioeconomic Characterization Survey (CASEN) from Chile. CASEN is a national, population-based survey which is representative at the municipal  level and is carried out by the Ministry of Planning (MIDEPLAN) to describe the socioeconomic situation as well as the impact of social programs on the living conditions of the Chilean Population.[^7]
+
+[^7]: Chile has 346 municipalities of which 324 are representative in CASEN 2013.
+
+In the following lines, the dataset in Stata format is downloaded. Then, the SAH variable (dependent variable) is recoded into 5 categories: 
+
+```{r loaddataset, message = FALSE, warning = FALSE}
+# Load data set and recode SAH variable
+library("foreign") # package to load datasets
+library("car")     # package with recode function
+data <- read.dta("https://msarrias.weebly.com/uploads/3/7/7/8/37783629/sah.chile.dta")
+data$sah2 <- recode(data$shealth, "1= 1; 2 = 2; 3 = 3; 5:6 = 4; 7 = 5")
+```
+
+The vector $\mathbf x_{ic}$ includes the following controls at the individual level:
+
+* `linch`: log of household income.
+* `agen` : age in years / 10.
+* `hsizen`: household size / 10.
+* `edun`: years of schooling / 10.
+* `male`: =1 for men.
+* `dcivil1`: =1 if the individual is married.
+* `dlstatus2`: =1 if the individual is unemployed.
+
+Some continuous variables are divided by 10 to improve convergence speed of the SML process and avoid singularities in the Hessian matrix. 
+
+In addition, a set of dummy variables indicating the self-perception of pollution and environmental problems is used. The dummy variables are obtained from the response to the question: *"What problems related to pollution and environmental degradation do you identify in your neighbourhood or location"*. Based on the answer, dummy variables were created for the following problems: 
+
+* `noise` :  noise pollution.
+* `airpol`: air pollution. 
+* `watpol`: water pollution. 
+* `vispol`: visual pollution. 
+* `waspol`: garbage (rubbish) in the neighborhood.
+
+The variables at the municipality level are:
+
+* `lmdinc`: log of median income (proxy for development).
+* `lpop`  : log of population (size effect).
+
+The following command lines show how to estimate the traditional ordered probit model. For other models such as the Binary (Logit and Probit) and Poisson model see @sarrias2016discrete.
+
+```{r}
+# Ordered probit model
+oprobit <- Rchoice(sah2 ~ linch + agen + hsizen + edun + male + dcivil1 + dlstatus2 + 
+                    noise + airpol + watpol + vispol + waspol +
+                    lmdinc + lpop,
+                   family = ordinal('probit'),
+                   data = data)
+summary(oprobit)
+```
+
+The argument `family = ordinal('probit')` indicates that an ordered probit model will be estimated. If the user wants an ordered logit model the argument should be `family = ordinal('logit')`. For other models, see `help(Rchoice)`. 
+
+The results show that household income and education increase the probability of reporting better health status, whereas age decreases it. Men are more likely to report better health than women and being unemployed is detrimental for health. At the neighborhood level, noise, air, and water pollution reduce health perception and `vispol` and `waspol` apparently do not matter for health. The coefficient for the logarithm of population for each municipality, which is intended to capture agglomeration effects, is negative but weakly significant, whereas the level of development is positively correlated correlated with individuals' health evaluation. 
+
+
+## Ordered Probit models with spatial random coefficients
+
+The standard ordered probit model does not allow for spatial heterogeneity in the coefficients. In this section, we estimate an Ordered Probit with Spatial Random Parameters (OPSRP) model. To reduce excessive computing time, we will only assume that the variables at the level of municipalities and neighborhood vary across space. 
+
+The first and more difficult task is to choose the distribution for each of them. As explained by @hensher2003mixed, distributions are essentially arbitrary approximations to the real behavioral profile. The researcher chooses a specific distribution because he has a sense that the "empirical truth" is somewhere in their domain. The most widely used distribution in the empirical literature is the normal distribution due to its properties. If unobserved spatial heterogeneity is viewed as the sum of small random influences, then the central limit theorem can be invoked to justify the normality assumption @greene2010modeling. Moreover, the normal distribution is unbounded, and therefore every real number has a positive probability of being drawn. Thus, specifying a given coefficient to follow a normal distribution is equivalent to making a priori assumption that both positive and negative coefficients exits across space [@sarrias2019monetary].
+
+This last property is very appealing in our case, since theoretically we might observe municipalities with positive and negative sign for the population coefficient. For instance, municipalities with a positive coefficient might be characterized for having positive urban externalities that outweigh the negative ones. In those municipalities, inhabitants, on average, enjoy of better health through local positive urban externalities. If the coefficient is negative, the opposite might be expected.
+
+A OPSRP model with normally distributed parameters is estimated as follows: 
+
+```{r random1, cache = TRUE}
+# Spatial random parameter model
+ran_1 <- Rchoice(sah2 ~ linch + agen + hsizen + edun + male + dcivil1 + dlstatus2 + 
+                    noise + airpol + watpol + vispol + waspol +
+                    lmdinc + lpop,
+                 family = ordinal('probit'),
+                 data = data, 
+                 ranp = c(noise = "n", airpol = "n", watpol = "n", vispol = "n", 
+                          waspol = "n", lmdinc = "n", lpop = "n"), 
+                 panel = TRUE, 
+                 index = "idc",
+                 R = 30, 
+                 method = "bfgs")
+summary(ran_1)
+```
+
+The argument `ranp` indicates which variables are random in the `formula` and their distributions. In this example, all the random variables are assumed to be normally distributed using `"n"`. The remaining distribution discussed in [Section 2.2](#dist) can be used using the following shorthands:
+
+* Triangular = `"t"`, 
+* Uniform = `"u"`, 
+* Truncated normal = `"cn"`, 
+* Log-normal = `"ln"`, 
+* Johnson's $S_b$ =  = `"sb"`.
+
+The number of draws for the simulation of the probability is set using the argument `R`. To keep the estimation time manageable, we use 30 draws for each individual. However, consistency of the SML requires a higher number of draws [see for example @train2009discrete].  
+
+The argument `index` is a string indicating the id for the municipalities in the data, whereas `panel=TRUE` allows for the spatial structure of the sample.  
+
+
+The previous model assumes that the coefficients has the following form:
+
+\begin{equation*}
+\beta_k = \bar{\beta}_k + \sigma_{k}\upsilon_{ir}
+\end{equation*}
+
+where $\upsilon_{ir} \sim N(0, 1)$. Thus, the coefficients with the <tt>mean.</tt>  and <tt>sd.</tt> prefix represent the estimated mean, $\widehat{\bar{\beta}}$, and standard deviation, $\widehat{\sigma}$, for variable $k$, respectively. If $\sigma_k = 0$, then there is not evidence of systematical variation for regression coefficient over space. The output shows that there is evidence of spatial heterogeneity for most of the variables, except for `vispol` and `lpop`.
+
+To test the joint hypothesis of coefficient homogeneity across space we can perform a Likelihood Ratio test using `lrtest` function from `lmtest` package. 
+
+```{r test, message = FALSE}
+# Testing spatial heterogeneity
+library("lmtest")
+lrtest(oprobit, ran_1)
+```
+
+The test rejects the null hypothesis providing empirical evidence of spatial heterogeneity for those variables. 
+
+Since the parameters are allowed to vary across space following a normal distribution, we can also compute the proportion of municipalities with positive coefficients using $\Phi(\widehat{\bar{\beta}}/\widehat{\sigma})$. For example, for `noise` and `lmdinc` the results are:
+
+```{r proportions}
+# Computing proportions
+pnorm(coef(ran_1)["mean.noise"] / coef(ran_1)["sd.noise"])
+pnorm(coef(ran_1)["mean.lmdinc"] / coef(ran_1)["sd.lmdinc"])
+```
+
+Thus, we can say that for the 100\% of the municipalities development is positively correlated with individuals' health, whereas for around 8\% of the municipalities higher noise pollution increases health. This last result can be true or an artifact of the normality assumption. 
+
+## Correlated parameters
+
+The previous model specifies the coefficients to be independently distributed, while one would expect correlation. To show this, the model `ran_1` we will be estimated but assuming that the spatially random coefficients are correlated adding the argument `correlation =  TRUE`:
+
+```{r random2, cache = TRUE}
+# Spatially random parameters with correlated coefficients
+ran_2 <- Rchoice(sah2 ~ linch + agen + hsizen + edun + male + dcivil1 + dlstatus2 + 
+                    noise + airpol + watpol + vispol + waspol +
+                    lmdinc + lpop,
+                 family = ordinal('probit'),
+                 data = data, 
+                 ranp = c(noise = "n", airpol = "n", watpol = "n", vispol = "n", 
+                          waspol = "n", lmdinc = "n", lpop = "n"), 
+                 panel = TRUE, 
+                 index = "idc",
+                 R = 30, 
+                 method = "bfgs", 
+                 correlation =  TRUE)
+summary(ran_2)
+```
+
+It is important to note that the output prints the elements of the lower-triangular Cholesky factor $\mathbf L$. The variance-covariance matrix, $\boldsymbol \Sigma$, can be extracted using the `vcov` function in the following way:
+
+```{r}
+# Obtain Sigma
+vcov(ran_2, what = "ranp", type = "cov", se = TRUE)
+```
+
+The estimated coefficients represent the variance and covariance of the randomly distributed parameters. Their standard errors are estimated using Delta Method. 
+
+To obtain the standard deviations for the random parameters, one might use the following code:
+
+```{r}
+# Obtain standard deviations
+vcov(ran_2, what = "ranp", type = "sd", se = TRUE)
+```
+
+Finally, the correlation matrix for the estimated coefficients is:
+
+```{r}
+# Obtain correlation matrix of estimated coefficients
+vcov(ran_2, what = "ranp", type = "cor")
+```
+
+The results show, for example, that noise pollution is positively correlated with other forms of pollution. Therefore, in those municipalities where noise pollution is detrimental to health, so are the other forms of pollution. It is also important to note that the municipalities where `noise` has a negative effect are also municipalities where lower development and higher population impact negatively the self-perception of health status. 
+
+
+## Region-specific coefficients
+
+
+In the applied literature it is very common to map the region-specific estimates to display the spatial heterogeneity for certain coefficients. This cannot be done using just the distribution of the parameters across regions, $g(\boldsymbol\beta_c| \boldsymbol\theta)$. The population distributions give us just the average affect, $\beta$, and the spatial variation around this mean , $\sigma_{\beta}$, when in fact we would like to know where each region's $\beta_c$ lies in $g(\beta_c| \theta)$.  We might be able to find the likely location of a given region on the heterogeneity distribution by moving from the conditional to the unconditional distribution [@revelt2000customer; @brunsdon1999comparsion; @sarrias2019monetary]. Using Bayes' theorem we obtain:
+
+\begin{equation}
+f(\boldsymbol\beta_c| \mathbf y_c, \mathbf X_c, \boldsymbol\theta) = \frac{f(\mathbf y_c| \mathbf X_c,\boldsymbol\beta_c)g(\boldsymbol\beta_c|\boldsymbol\theta)}{f(\mathbf y_c| \mathbf X_c, \boldsymbol\theta)} = \frac{f(\mathbf y_c| \mathbf  X_c,\boldsymbol\beta_c)g(\boldsymbol\beta_c|\boldsymbol\theta)}{\int_{\boldsymbol\beta_c}f(\mathbf y_c| \mathbf X_c, \boldsymbol\beta_c)g(\boldsymbol\beta_c|\boldsymbol\theta)d\boldsymbol\beta_c},
+\end{equation}
+
+where $f(\boldsymbol\beta_c| \mathbf y_c,  \mathbf X_c, \boldsymbol\theta)$ is the distribution of the regional parameters $\boldsymbol\beta_c$ conditional on the sequence of choices of all the individuals in region $c$, whereas $g(\boldsymbol\beta_c|\boldsymbol\theta)$ is the unconditional distribution. The conditional expectation of $\boldsymbol\beta_c$ is given by
+
+\begin{equation}\label{eq:conditional_mean}
+\bar{\boldsymbol\beta_c} = E\left[\boldsymbol\beta_c| \mathbf y_c, \mathbf X_c, \boldsymbol\theta\right]=\frac{\int_{\boldsymbol\beta_c} \boldsymbol\beta_c f(\mathbf y_c| \mathbf X_c,\boldsymbol\beta_c)g(\boldsymbol\beta_c|\boldsymbol\theta)d\boldsymbol\beta_c}{\int_{\boldsymbol\beta_c}f(\mathbf y_c| \mathbf X_c, \boldsymbol\beta_c)g(\boldsymbol\beta_c|\boldsymbol\theta)d\boldsymbol\beta_c}
+\end{equation}
+
+This expectation gives us the conditional mean of the distribution of the spatially random parameter. The simulator for this expectation is:
+
+\begin{equation}
+\widehat{\bar{\boldsymbol\beta_c}} = \widehat{E}\left[\boldsymbol\beta_c| \mathbf y_c, \mathbf X_c, \widehat{\boldsymbol\theta}\right]  =  \frac{\frac{1}{R}\sum_{r = 1}^R \widehat{\boldsymbol\beta}_{cr}\prod_{i = 1}^{n_c}f^*(y_{ci}|\mathbf x_{ci},\widehat{\boldsymbol\beta}_{cr})}{\frac{1}{R}\sum_{r = 1}^R \prod_{i = 1}^{n_c}f^*(y_{ci}|\mathbf x_{ci},\widehat{\boldsymbol\beta}_{cr})}
+\end{equation}
+
+This estimator is the region-specific estimate, and can be computed in **Rchoice** using `effect.Rchoice` function and plotted using the function `plot`. In the following lines the municipality's coefficient for all the random parameters is plotted using a kernel approximation:
+
+
+```{r kernels, fig.width = 12, fig.height = 6, fig.align="center"}
+# Plot municipality-specific coefficient
+par(mfrow = c(3, 3))
+plot(ran_2, par = "noise",  type = "density", main = "Noise Pol.")
+plot(ran_2, par = "airpol", type = "density", main = "Air Pol.")
+plot(ran_2, par = "watpol", type = "density", main = "Water Pol.")
+plot(ran_2, par = "vispol", type = "density", main = "Visual Pol.")
+plot(ran_2, par = "waspol", type = "density", main = "Garbage Pol.")
+plot(ran_2, par = "lmdinc", type = "density", main = "Development")
+plot(ran_2, par = "lpop",   type = "density", main = "Population")
+```
+
+The red area under the kernel distribution illustrates the proportion of municipalities with a positive conditional mean. The most relevant result is that size (`lpop`) seems to be a positive externality for almost 50\% of the municipalities, evidencing substantial spatial heterogeneity. This important result is obscured by the traditional ordered probit model. 
+
+We might also plot the 95\% confidence interval for the conditional means of `airpol` and `noise` for the first 50 municipalities by typing:
+
+
+```{r, fig.width = 12, fig.height= 6, fig.align="center"}
+# Plot region-specific confidence intervals.
+par(mfrow = c(1, 2))
+plot(ran_2, par = "airpol", ind =  TRUE, id = 1:50, 
+     ylab = "Municipalities")
+plot(ran_2, par = "noise", ind =  TRUE, id = 1:50, 
+     ylab = "Municipalities")
+```
+
+In terms of consistency of the regional-specific estimates, it is expected that $\widehat{\bar{\boldsymbol\beta}}_c \to \boldsymbol\beta_c$ as $n_c\to\infty$. That is, if we have more information about the choices made by the individuals in each region, then we are in better position to identify where each region coefficient lies on $g(\boldsymbol\beta_c)$ [see for example @train2009discrete; 
+@revelt2000customer; @sarrias2018individual]. 
+
+# Conclusion {#conclu}
+
+This paper contributes to the literature of spatial econometric models that deal with spatially non-stationary process by assuming unobserved heterogeneity. This modelling approach has been widely used in discrete choice modeling, but it can also be implemented to capture and model observed and unobserved spatial heterogeneity.  One of the main advantages of this modelling approach is that allows the analyst to include variables at the individual level, which mitigate the ecological fallacy problem, and to add more flexibility regarding the shape and boundedness of the coefficients. 
+
+Spatial heterogeneity is represented by some distribution $g(\beta_c)$, which can take any continuous shape, and the analyst must choose the distribution a priori. The choice of the distribution may be guided by theoretical reasons regarding to the domain and bound of the coefficients. It is also discussed some extensions that can be useful in order to take into consideration the geographical location of the regions, as well as the spatial correlation of the parameters. Although the unobserved spatial heterogeneity using continuous distributions has very appealing features, the probability for each region does not have a closed form solution. Therefore, we need to simulate this probability and estimate the parameters using SML, which can be very costly in terms of computational time.
+
+This study also shows how the **Rchoice** package can be used to estimate this type of models. To do so, we provide a simple example for ordered probit models, focusing on how the determinants of individuals' self-assessed health status might vary across space. 
+
+
+
+This work can be extended in different ways. First, one of the main concerns and limitations of the model is that the estimation requires computing the product of the probabilities for all individuals in a given region. Thus, if the number of individuals is too high, the estimation method may run into numerical difficulties. To overcome this problem some of the two methods proposed by @lee2000numerically can be studied under the spatial context. These methods alleviate the numerical problems by interchanging the inner product with the outer summation. Another possible extension is to study the behavior of the parameters  with small and large samples using Bayesian and EM algorithms.  Finally, more empirical applications are needed in order to understand the  strengths and weaknesses for estimating models with locally varying coefficients using unobserved heterogeneity. 
+
+
+# References

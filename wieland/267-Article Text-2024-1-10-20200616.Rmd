@@ -1,0 +1,480 @@
+---
+title: "REAT: A Regional Economic Analysis Toolbox for R"
+author: "Thomas Wieland"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+highlight: pygments
+theme: spacelab
+fig_retina: 2
+header-includes:
+- \usepackage{amsmath}
+- \usepackage{amssymb}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(prompt =  TRUE)
+```
+
+# Introduction 
+
+This Rmd file provides all the R-code from the paper **REAT: A Regional Economic Analysis Toolbox for R** by _Thomas Wieland_ published
+in REGION ([DOI](\textcolor{blue}{https://doi.org/10.18335/region.v6i3.267})). This Rmd file contains the structure of the paper, but not all its text. Please,
+consult the PDF- or HTML-version of the paper for the text.
+
+
+# Concentration, dispersion and regional disparities
+
+## Indicators of concentration and dispersion
+
+## Application in REAT
+
+### REAT functions for concentration and dispersion indicators
+
+### Application example: Small-scale regional disparities in health care provision
+
+```{r loadRchoice, message = FALSE}
+library("REAT")
+```
+```{r}
+data(GoettingenHealth2)
+```
+```{r}
+gini (GoettingenHealth2$phys_gen)
+```
+```{r}
+gini (GoettingenHealth2$phys_gen, coefnorm = TRUE)
+```
+```{r}
+herf (GoettingenHealth2$phys_gen)
+```
+```{r}
+herf (GoettingenHealth2$phys_gen, coefnorm = TRUE)
+```
+```{r}
+gini(GoettingenHealth2$pop, lc = TRUE, lsize = 1, le.col = "black",
+ lc.col = "orange", lcx = "Shares of districts", lcy = "Shares of
+ providers", lctitle = "Spatial concentration of health care
+ providers", lcg = TRUE, lcgn = TRUE, lcg.caption =
+ "Population 2016:", lcg.lab.x = 0, lcg.lab.y = 1)
+
+gini(GoettingenHealth2$phys_gen, lc = TRUE, lsize = 1, add.lc = TRUE,
+ lc.col = "red", lcg = TRUE, lcgn = TRUE, lcg.caption =
+ "Physicians 2016:", lcg.lab.x = 0, lcg.lab.y = 0.85)
+
+gini(GoettingenHealth2$psych, lsize = 1, lc = TRUE, add.lc = TRUE,
+ lc.col = "blue", lcg = TRUE, lcgn = TRUE, lcg.caption =
+ "Psychotherapists 2016:", lcg.lab.x = 0, lcg.lab.y = 0.7)
+```
+```{r}
+disp(GoettingenHealth2[c(5,6,7)], weighting = GoettingenHealth2$pop)
+```
+```{r}
+gini_phys <- gini (GoettingenHealth2$phys_gen)
+# save as gini_phys (numeric vector of length = 1)
+gini_phys
+```
+```{r}
+disp_Goettingen <- disp(GoettingenHealth2[c(5,6,7)],
+ weighting = GoettingenHealth2$pop)
+
+disp_Goettingen
+```
+
+# Regional convergence
+
+## The concept of beta and sigma convergence
+
+## Application in REAT
+
+### REAT functions for beta and sigma convergence
+
+### Application example: Beta and sigma convergence in Germany on the county level
+
+
+
+```{r}
+data (G.counties.gdp)
+```
+```{r}
+options(scipen = 100, digits = 4)
+```
+
+**PLEASE CHECK**
+        
+```{r}
+betaconv.ols (G.counties.gdp$gdppc2010, 2010, G.counties.gdp$gdppc2014,
+ 2014, print.results = TRUE)
+```
+```{r}
+sigmaconv (G.counties.gdp$gdppc2010, 2010, G.counties.gdp$gdppc2014,
+ 2014, sigma.measure = "cv", print.results = TRUE)
+```
+```{r}
+rca (G.counties.gdp$gdppc2000, 2000, G.counties.gdp[55:68], 2014,
+ conditions = NULL, sigma.type = "trend", sigma.measure = "cv",
+ beta.plot = TRUE, beta.plotLine = TRUE, beta.plotX =
+ "Ln (initial GDP p.c.)", beta.plotY = "Ln (av. growth GDP p.c.)",
+ beta.plotTitle = "Beta convergence of German counties 2000-2014",
+ sigma.plot = TRUE, sigma.plotY = "cv of ln (GDP p.c.)",
+ sigma.plotTitle = "Sigma convergence of German counties 2000-2014")
+```
+```{r}
+regionaldummies <- to.dummy(G.counties.gdp$regional)
+# Creating dummy variables for West/East
+# regionaldummies[,1] = East (1/0), regionaldummies[,2] = West (1/0)
+G.counties.gdp$West <- regionaldummies[,2]
+# Adding the dummy variable for West
+
+converg_results <- rca (G.counties.gdp$gdppc2000, 2000,
+ G.counties.gdp[55:68], 2014, conditions = G.counties.gdp[c(70)],
+ sigma.type = "trend")
+```
+```{r}
+converg_results$betaconv$regdata
+# All results in list converg_results
+# converg_results contains list betaconv (beta convergence results)
+# betaconv contains data frame regdata (regression data)
+
+```
+```{r}
+converg_results$sigmaconv$sigma.trend
+
+# All results in list converg_results
+# converg_results contains list sigmaconv (sigma convergence results)
+# sigmaconv contains data frame sigma.trend (sigma values)
+
+```
+
+# Specialization of regions and spatial concentration of industries
+
+## Indicators of regional specialization and industry concentration
+
+## Application in REAT
+
+### REAT functions for regional specialization and industry concentration
+
+### Application example 1: Regional specialization of Göttingen
+
+
+```{r}
+data(Goettingen)
+```
+```{r}
+locq (Goettingen$Goettingen2017[4], Goettingen$Goettingen2017[1],
+ Goettingen$BRD2017[4], Goettingen$BRD2017[1])
+```
+```{r}
+# Industry: manufacturing (letter C) in row 4
+# row 1 = all-over employment
+ 
+locq (Goettingen$Goettingen2017[2:16], Goettingen$Goettingen2017[1],
+ Goettingen$BRD2017[2:16], Goettingen$BRD2017[1],
+ industry.names = Goettingen$WZ2008_Code[2:16], plot.results = TRUE,
+ plot.title = "Location quotients for Gottingen 2017")
+# all industries (rows 2-16 in the dataset)
+```
+```{r}
+herf(Goettingen$Goettingen2017[2:16])
+```
+```{r}
+herf(Goettingen$BRD2017[2:16])
+```
+```{r}
+hoover(Goettingen$Goettingen2017[2:16], ref = Goettingen$BRD2017[2:16])
+```
+```{r}
+gini.spec(Goettingen$Goettingen2017[2:16], Goettingen$BRD2017[2:16])
+```
+```{r}
+krugman.spec(Goettingen$Goettingen2017[2:16], Goettingen$BRD2017[2:16])
+```
+ 
+### Application example 2: Identifying clusters in Germany using aggregate data
+
+
+```{r}
+data(G.regions.industries)
+```
+```{r}
+conc_i <- conc (e_ij = G.regions.industries$emp_all,
+ industry.id = G.regions.industries$ind_code,
+ region.id = G.regions.industries$region_code)
+```
+```{r}
+cor(conc_i[,1:3])
+```
+```{r}
+spec_j <- spec (e_ij = G.regions.industries$emp_all,
+ industry.id = G.regions.industries$ind_code,
+ region.id = G.regions.industries$region_code)
+```
+```{r}
+cor(spec_j[,1:3])
+```
+```{r}
+locq2(e_ij = G.regions.industries$emp_all,
+ G.regions.industries$ind_code, G.regions.industries$region_code)
+```
+```{r}
+lqs <- locq2(e_ij = G.regions.industries$emp_all,
+ G.regions.industries$ind_code, G.regions.industries$region_code,
+ LQ.output = "df")
+```
+
+```{r}
+lqs_sort <- lqs[order(lqs$LQ, decreasing = TRUE),]
+# Sort decreasing by size of LQ
+lqs_sort[1:5,]
+```
+
+```{r}
+litzenberger2(G.regions.industries$emp_all,
+ G.regions.industries$ind_code, G.regions.industries$region_code,
+ G.regions.industries$area_sqkm, G.regions.industries$pop,
+ G.regions.industries$firms)
+```
+
+```{r}
+lss <- litzenberger2(G.regions.industries$emp_all,
+ G.regions.industries$ind_code, G.regions.industries$region_code,
+ G.regions.industries$area_sqkm, G.regions.industries$pop,
+ G.regions.industries$firms, CI.output = "df")
+```
+```{r}
+lss_sort <- lss[order(lss$CI, decreasing = TRUE),]
+lss_sort[1:5,]
+```
+
+### Application example 3: Identifying clusters using micro-data
+
+```{r}
+region <- c("Wien", "Wien", "Wien", "Wien", "Wien", "Linz",
+ "Linz", "Linz", "Linz", "Graz")
+# regions (Austrian cities)
+emp_firm <- c(200,650,12000,100,50,16000,13000,1500,1500,25000)
+# employment of the ten firms
+emp_region <- c(500000,400000,100000)
+# employment of the three regions
+ellison.a (emp_firm, emp_region, region)
+```
+
+
+```{r}
+data(FK2014_EGC)
+ega <- ellison.a2 (FK2014_EGC$emp_firm, FK2014_EGC$industry,
+ FK2014_EGC$region)
+```
+
+```{r}
+ellison.c (FK2014_EGC$emp_firm, FK2014_EGC$industry,
+ FK2014_EGC$region, FK2014_EGC$emp_region)
+```
+```{r}
+ellison.c2 (FK2014_EGC$emp_firm, FK2014_EGC$industry,
+ FK2014_EGC$region, FK2014_EGC$emp_region)
+```
+```{r}
+howard.xcl2 (FK2014_EGC$firm, FK2014_EGC$industry,
+ FK2014_EGC$region)
+```
+
+**PLEASE NOTE**
+
+The computation of this index implies sampling. Therefore, the numbers differ with each run.        
+
+
+
+# Proximity and accessibility
+
+## Distance-based measures of accessibility and proximity using individual point-level data
+
+## Application in REAT
+
+### REAT functions for accessibility and proximity on the point level
+
+### Application example 1: Location analysis of medical practices
+
+```{r}
+data(GoettingenHealth1)
+data(GoettingenHealth2)
+physgen <- GoettingenHealth1[GoettingenHealth1$type == "phys_gen",]
+# general practitioners: column "type" is equal to "phys_gen"
+physgen_sample <- physgen[sample(nrow(physgen),10),]
+# random sampling of ten general practitioners
+physgen_pot <- dist.buf (physgen_sample, "location", "lat", "lon",
+ GoettingenHealth2, "district", "lat", "lon", bufdist = 1000,
+ ep_sum = "pop")
+# counting all districts within a radius of 1000 meters
+# and summing the corresponding population
+```
+**PLEASE NOTE**
+
+The data used in this section are randomly sampled from the available dataset. Therefore, the
+results differ with each run.
+
+```{r}
+mean2(physgen_pot$count_table$sum_pop)
+#[1] 4967
+```
+```{r}
+physgen_od <- dist.mat(GoettingenHealth2, "district", "lat", "lon",
+ physgen_sample, "location", "lat", "lon")
+# creating OD matrix from all districts to the
+# sampled general practitioners
+physgen_od <- merge (physgen_od, GoettingenHealth2,
+ by.x = "from", by.y = "district")
+# merging with GoettingenHealth2 to include the
+# population values of the districts
+physgen_hansen <- hansen (physgen_od, "to", "from", "pop",
+ "distance", dtype = "exp", lambda = -0.28)
+```
+```{r}
+# calculating Hansen accessibility for the ten
+# sampled general practitioners
+mean2(physgen_hansen$accessibility)
+# [1] 30207
+```
+```{r}
+psychgen <- GoettingenHealth1[GoettingenHealth1$type == "psych",]
+psych_sample <- psychgen[sample(nrow(psychgen),10),]
+psych_pot <- dist.buf (psych_sample, "location", "lat", "lon",
+ GoettingenHealth2, "district", "lat", "lon", bufdist = 1000,
+ ep_sum = "pop")
+mean2(psych_pot$count_table$sum_pop)
+# [1] 14221
+```
+```{r}
+psych_od <- dist.mat(GoettingenHealth2, "district", "lat", "lon",
+ psych_sample, "location", "lat", "lon")
+psych_od <- merge (psych_od, GoettingenHealth2,
+ by.x = "from", by.y = "district")
+psych_hansen <- hansen (psych_od, "to", "from", "pop",
+ "distance", dtype = "exp", lambda = -0.11)
+```
+```{r}
+mean2(psych_hansen$accessibility)
+# [1] 116846
+```
+```{r}
+data (GoettingenHealth1)
+```
+```{r}
+area_goe <- 1753000000
+# area of Landkreis Goettingen (sqm)
+area_nom <- 1267000000
+# area of Landkreis Northeim (sqm)
+area_gn <- area_goe+area_nom
+ripley(GoettingenHealth1[GoettingenHealth1$type == "pharm",],
+ "location", "lat", "lon", area = area_gn, t.max = 30000, t.sep = 300,
+ K.local = TRUE, ci.boot = TRUE, ci.alpha = 0.05, ciboot.samples = 100,
+ plot.title = "Ripley's K: Clustering of pharmacies")
+```
+```{r}
+ripley(GoettingenHealth1[GoettingenHealth1$type == "psych",],
+ "location", "lat", "lon", area = area_gn, t.max = 30000, t.sep = 300,
+ K.local = TRUE, ci.boot = TRUE, ci.alpha = 0.05, ciboot.samples = 100,
+ plot.title = "Ripley's K: Clustering of psychotherapists")
+```
+
+# Analysis and prognosis of regional growth
+ 
+## Tools and models concerning regional growth
+
+### Analyzing regional growth: shift-share analysis and portfolio matrix
+
+### Commercial area prognosis
+
+## Commercial area prognosis
+
+### REAT functions for analyzing and forecasting regional growth
+
+### Application example 1: Analysis of regional growth in Göttingen
+
+```{r}
+data(Goettingen)
+```
+```{r}
+portfolio (Goettingen$Goettingen2008[2:16],
+ Goettingen$Goettingen2017[2:16],
+ Goettingen$BRD2008[2:16], Goettingen$BRD2017[2:16],
+ psize = Goettingen$Goettingen2017[2:16], psize.factor = 15,
+ pmtitle = "Growth of 15 industries in Göttingen",
+ industry.names = Goettingen$WZ2008_Code[2:16],
+ pmx = "Growth Göttingen 2008-2017 [%]",
+ pmy = "Growth Germany 2008-2017 [%]",
+ pcol.border = "grey",
+ pcol = c("darkgreen", "powderblue", "chocolate", "darkred",
+ "orange", "cadetblue1", "chartreuse1", "red", "coral",
+ "coral4", "cyan", "darkcyan", "yellow", "green", "deeppink"),
+ leg = TRUE, leg.x = -90)
+
+locq.growth (Goettingen$Goettingen2008[2:16],
+ Goettingen$Goettingen2017[2:16],
+ Goettingen$BRD2008[2:16], Goettingen$BRD2017[2:16],
+ psize = Goettingen$Goettingen2017[2:16], psize.factor = 15,
+ y.axis = "r", industry.names = Goettingen$WZ2008_Code[2:16],
+ pmtitle = "Growth and specialization in Göttingen",
+ pmx = "Regional specialization Göttingen",
+ pmy = "Growth Götingen 2008-2017 [%]", pcol.border = "grey",
+ pcol = c("darkgreen", "powderblue", "chocolate", "darkred",
+ "orange", "cadetblue1", "chartreuse1", "red", "coral",
+ "coral4", "cyan", "darkcyan", "yellow", "green", "deeppink"),
+ leg = TRUE, leg.x = 0.1)
+ 
+shift(Goettingen$Goettingen2008[2:16], Goettingen$Goettingen2017[2:16],
+ Goettingen$BRD2008[2:16], Goettingen$BRD2017[2:16])
+```
+
+```{r}
+shift(Goettingen$Goettingen2008[2:16], Goettingen$Goettingen2017[2:16],
+ Goettingen$BRD2008[2:16], Goettingen$BRD2017[2:16],
+ shift.method = "Gerfin")
+```
+
+```{r}
+shiftid(Goettingen$Goettingen2008[2:16], Goettingen[2:16,3:12],
+ Goettingen$BRD2008[2:16], Goettingen[2:16,13:22],
+ time1 = 2008, time2 = 2017,
+ industry.names = Goettingen$WZ2008_Code[2:16])
+# columns 3-12: employment in Göttingen 2009-2017
+# columns 13-22: employment in Germany 2009-2017
+```
+
+### Application example 2: Commercial area prognosis for Göttingen
+
+
+```{r}
+data(Goettingen)
+```
+```{r}
+ca_share <- c(0, 0, 100, 90, 70, 100, 10, 20, 20, 20, 20, 0, 0, 0, 0)
+# industry-specific shares of employees in commercial areas
+sq_quote <- c(0.77, 0.77, 0.15, 0.15, 0.77, 0.15, 0.77, 0.77,
+ 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77)
+# industry-specific resettlement quote
+rq_quote <- rep(0.7, 15)
+# industry-specific relocation quote (0.7 for each of the 15 industries)
+area_index <- c(0, 0, 200, 75, 250, 250, 50, 100, 100, 100, 100,
+ 50, 50, 50, 50)
+# industry-specific area index (sqm commercial area per employee)
+gifpro_goettingen <- gifpro (e_ij = Goettingen$Goettingen2017[2:16],
+ a_i = ca_share, sq_ij = sq_quote, rq_ij = rq_quote, tinterval = 5,
+ ai_ij = area_index, time.base = 2017,
+ industry.names = Goettingen$WZ2008_Code[2:16], output = "full")
+```
+
+```{r}
+gifpro_goettingen$components
+```
+```{r}
+gifpro.tbs (e_ij = Goettingen[2:16,3:12],
+ a_i = ca_share, sq_ij = sq_quote, rq_ij = rq_quote, tinterval = 5,
+ prog.func = rep("exp", nrow(Goettingen[2:16,3:12])),
+ ai_ij = area_index, time.base = 2008,
+ industry.names = Goettingen$WZ2008_Code[2:16],
+ prog.plot = TRUE, plot.single = FALSE, output = "full")
+```
+
+# Final remarks
