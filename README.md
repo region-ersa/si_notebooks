@@ -1,6 +1,8 @@
 # Special Issue: The Potential of Notebooks for Scientific Publication: Reproducibility, and Dissemination
 
-Francisco Rowe, Gunther Maier, Daniel Arribas-Bel and Sergio J. Rey
+This repository contains links to articles' pdf and computational notebooks to reproduce all the articles published in our special issue. All computational notebooks were replicable at the time of publication but they may be affected by updates to software packages, libraries, dependencies or hardware. If you experience issues trying to replicate an article, we encourage you to contact authors directly.
+
+[Francisco Rowe](https://twitter.com/Fcorowe), Gunther Maier, Daniel Arribas-Bel and Sergio J. Rey
 
 ## Table of Contents
 
